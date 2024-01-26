@@ -4,7 +4,7 @@ If the Service Bus receiver uses a `PrefetchSize` that is larger than the number
 I cannot determine if the session lock is being automatically renewed by the client or by something server-side.  I don't see any activity in the client logs that indicates the client (automatically) renewing the session lock.  The session lock *is* released (on the server) if the connection between the client and the server is severed.
 
 ## Recreate
-I posted a Visual Studio 2022 solution (console application) that recreates the issue to Github.  Informational logs are written to the console, while trace logs are written to a file in the working directory.
+I posted a Visual Studio 2022 solution (console application) that recreates the issue to [GitHub](https://github.com/michaelmcmaster/SessionLockFailure.git).  Informational logs are written to the console, while trace logs are written to a file in the working directory.
 
 This application can be pointed to a ServiceBus, and it will:
 * Bootstrap (create or delete and recreate) a fresh queue (default name of 'session_lock_failure')
