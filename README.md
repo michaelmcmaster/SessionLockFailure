@@ -1,5 +1,10 @@
-## Issue Description
-If the Service Bus receiver uses a `PrefetchSize` that is larger than the number of messages in the Service Bus session, the session lock seems to be automatically renewed until the client connection is closed.  It does **not** matter if the session is from a Queue or a Subscription - the failure mode exists with both.
+# Description
+If the Service Bus receiver uses a `PrefetchSize` that is larger than the number of messages in the Service Bus session, the session lock seems to be automatically (and indefinitely) renewed until the client connection is closed... and allows a malfunctioning client to "hang" a session indefinitely.
+
+## Related Observations
+- It does **not** matter if the session is from a Queue or a Subscription - the failure mode exists with both
+- Since the session lock never actually expires, the `DeliveryCount` on the received (but not completed) message(s) is not incremented
+- Doing a (single) `ReceiveMessage` with a `PrefetchSize` greater than one appears to behave the same as a (batch) `ReceiveMessages` with a `maxMessages` of the same value
 
 I cannot determine if the session lock is being automatically renewed by the client or by something server-side.  I don't see any activity in the client logs that indicates the client (automatically) renewing the session lock.  The session lock *is* released (on the server) if the connection between the client and the server is severed.
 
