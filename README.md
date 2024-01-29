@@ -4,9 +4,9 @@ If the Service Bus receiver uses a `PrefetchSize` that is larger than the number
 ## Related Observations
 - It does **not** matter if the session is from a Queue or a Subscription - the failure mode exists with both
 - Since the session lock never actually expires, the `DeliveryCount` on the received (but not completed) message(s) is not incremented
-- Doing a (single) `ReceiveMessage` with a `PrefetchSize` greater than one appears to behave the same as a (batch) `ReceiveMessages` with a `maxMessages` of the same value
+- Doing a (single) `ReceiveMessage` with a non-zero `PrefetchSize` appears to behave the same as a (batch) `ReceiveMessages` with a `maxMessages` of the same value
 
-I cannot determine if the session lock is being automatically renewed by the client or by something server-side.  I don't see any activity in the client logs that indicates the client (automatically) renewing the session lock.  The session lock *is* released (on the server) if the connection between the client and the server is severed.
+I cannot determine if the session lock is being automatically renewed by the client or by something server-side.  I don't see any activity in the client logs that indicates the client is (automatically) renewing the session lock.  The session lock *is* released (on the server) if the connection between the client and the server is severed.
 
 ## Recreate
 I posted a Visual Studio 2022 solution (console application) that recreates the issue to [GitHub](https://github.com/michaelmcmaster/SessionLockFailure.git).  Informational logs are written to the console, while trace logs are written to a file in the working directory.
@@ -19,7 +19,7 @@ This application can be pointed to a ServiceBus, and it will:
   - all messages have the same session identifier
 * Using the Service Bus client, performs an `AcceptNextSession` operation
   - `ReceiverOptions` set to a configurable `PrefetchSize`
-* Using the `sessionReceiver` from ^^^, performs an `ReceiveMessage` operation
+* Using the `sessionReceiver` from ^^^, performs a `ReceiveMessage` operation
 * Simulates a "slow receiver" by delaying until the `sessionReceiver`'s `SessionLockedUntil` is reached
 * Delays for an *additional* amount of time (amount of additional delay doesn't seem to matter)
 * Using the `sessionReceiver` and `receivedMessage` from ^^^, performs a `CompleteMessage` operation
@@ -49,7 +49,7 @@ Command Line: `SessionLockFailure.exe -c "******" -m 2 -p 2`
     Azure.Messaging.ServiceBus.ServiceBusException: The session lock has expired on the MessageSession. Accept a new MessageSession. TrackingId:*****, SystemTracker:***:***:amqps://******/***;0:7:8:source(address:/session_lock_failure,filter:[com.microsoft:session-filter:]), Timestamp:2024-01-26T21:35:03 (SessionLockLost).
 
 ## Scenario 2 (Failure) : messages < prefetch
-With this scenario, the Service Bus misbehaves (session lock is held indefinitely).  During the delay, the server-side does *not* expire the session lock.  The (server-side) session lock is being *indefinitely maintained* by the client connection... causing the session to be *indefinitely* stalled until the client connection is terminated.  This can be further confirmed by attempting a AcquireNextSession + Receive (ex. from ServiceBusExplorer) during the delay period.  Messages are successfully completed when the client-side attempts (after the delay) to complete the messages.
+With this scenario, the Service Bus misbehaves (session lock is held indefinitely).  During the delay, the server-side does *not* expire the session lock.  The (server-side) session lock is being *indefinitely maintained* by the client connection... causing the session to be *indefinitely* stalled until the client connection is terminated.  This can be further confirmed by attempting an AcquireNextSession + Receive (ex. from ServiceBusExplorer) during the delay period.  The messages are successfully completed when the client-side attempts (after the delay) to complete the messages... but they shouldn't be, as the session lock *should* have been lost.
 
 Command Line: `SessionLockFailure.exe -c "*****" -m 1 -p 2`
 
